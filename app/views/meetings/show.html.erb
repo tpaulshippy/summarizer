@@ -1,0 +1,30 @@
+<% content_for :title, @meeting.title.presence || "Meeting on #{@meeting.held_on}" %>
+
+<div class="flex items-start gap-8">
+  <div class="flex-1">
+    <div class="mb-2 text-sm text-slate-600">
+      <%= link_to @meeting.municipality.name, municipality_path(@meeting.municipality) %> · <%= @meeting.held_on %> · <%= @meeting.meeting_type %>
+    </div>
+    <h1 class="text-3xl font-semibold mb-4"><%= @meeting.title.presence || @meeting.video_id %></h1>
+    <div class="prose max-w-none">
+      <h2 class="text-xl font-semibold mt-6 mb-2">Summary</h2>
+      <div class="bg-white ring-1 ring-slate-200 rounded-lg p-4 whitespace-pre-wrap"><%= @meeting.summary.presence || "Summary pending..." %></div>
+
+      <h2 class="text-xl font-semibold mt-6 mb-2">Transcript</h2>
+      <details class="bg-white ring-1 ring-slate-200 rounded-lg p-4" open>
+        <summary class="cursor-pointer select-none text-slate-700">View transcript</summary>
+        <pre class="whitespace-pre-wrap text-sm text-slate-800 mt-3"><%= @meeting.transcript %></pre>
+      </details>
+    </div>
+  </div>
+  <aside class="w-80">
+    <div class="bg-white ring-1 ring-slate-200 rounded-lg overflow-hidden">
+      <div class="aspect-video bg-slate-100">
+        <iframe class="w-full h-full" src="https://www.youtube.com/embed/<%= @meeting.video_id %>" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+      </div>
+      <div class="p-4 border-t border-slate-200">
+        <%= link_to "Watch on YouTube", @meeting.video_url, class: "text-blue-600 hover:text-blue-800" %>
+      </div>
+    </div>
+  </aside>
+</div>

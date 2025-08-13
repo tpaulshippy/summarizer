@@ -1,0 +1,38 @@
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-semibold">All meetings</h1>
+  <div class="text-sm text-slate-600">
+    Sort by:
+    <%= link_to "Date", meetings_path(sort: :date, direction: params[:direction] == 'asc' ? 'desc' : 'asc'), class: "underline decoration-dotted mx-1" %>
+    <%= link_to "Type", meetings_path(sort: :meeting_type, direction: params[:direction] == 'asc' ? 'desc' : 'asc'), class: "underline decoration-dotted mx-1" %>
+    <%= link_to "Municipality", meetings_path(sort: :municipality, direction: params[:direction] == 'asc' ? 'desc' : 'asc'), class: "underline decoration-dotted mx-1" %>
+  </div>
+  </div>
+
+<div class="bg-white shadow-sm ring-1 ring-slate-200 rounded-lg overflow-hidden">
+  <table class="w-full text-left">
+    <thead class="bg-slate-50 text-slate-700 text-sm">
+      <tr>
+        <th class="px-4 py-3">Date</th>
+        <th class="px-4 py-3">Municipality</th>
+        <th class="px-4 py-3">Type</th>
+        <th class="px-4 py-3">Title</th>
+        <th class="px-4 py-3"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @meetings.each do |meeting| %>
+        <tr class="border-t border-slate-100 hover:bg-slate-50">
+          <td class="px-4 py-3 whitespace-nowrap"><%= meeting.held_on %></td>
+          <td class="px-4 py-3"><%= meeting.municipality.name %></td>
+          <td class="px-4 py-3"><%= meeting.meeting_type %></td>
+          <td class="px-4 py-3"><%= meeting.title.presence || meeting.video_id %></td>
+          <td class="px-4 py-3 text-right"><%= link_to "View", meeting_path(meeting), class: "text-blue-600 hover:text-blue-800" %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<div class="mt-6">
+  <%= pagy_nav(@pagy) if defined?(@pagy) && @pagy %>
+</div>

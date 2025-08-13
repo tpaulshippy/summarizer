@@ -1,0 +1,31 @@
+<% content_for :title, @municipality.name %>
+
+<div class="mb-6">
+  <h1 class="text-3xl font-semibold"><%= @municipality.name %></h1>
+  <div class="text-sm text-slate-600 mt-1">
+    Playlist: <%= link_to @municipality.youtube_playlist_url, @municipality.youtube_playlist_url, class: "text-blue-600 hover:text-blue-800" %>
+  </div>
+  </div>
+
+<div class="bg-white ring-1 ring-slate-200 rounded-lg overflow-hidden">
+  <table class="w-full text-left">
+    <thead class="bg-slate-50 text-slate-700 text-sm">
+      <tr>
+        <th class="px-4 py-3">Date</th>
+        <th class="px-4 py-3">Type</th>
+        <th class="px-4 py-3">Title</th>
+        <th class="px-4 py-3"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @meetings.each do |meeting| %>
+        <tr class="border-t border-slate-100 hover:bg-slate-50">
+          <td class="px-4 py-3 whitespace-nowrap"><%= meeting.held_on %></td>
+          <td class="px-4 py-3"><%= meeting.meeting_type %></td>
+          <td class="px-4 py-3"><%= meeting.title.presence || meeting.video_id %></td>
+          <td class="px-4 py-3 text-right"><%= link_to "View", meeting_path(meeting), class: "text-blue-600 hover:text-blue-800" %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

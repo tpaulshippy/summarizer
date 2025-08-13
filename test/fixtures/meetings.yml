@@ -1,0 +1,21 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  municipality: one
+  meeting_type: MyString
+  video_id: MyString
+  video_url: MyString
+  held_on: 2025-08-12
+  transcript: MyText
+  summary: MyText
+  title: MyString
+
+two:
+  municipality: two
+  meeting_type: MyString
+  video_id: MyString
+  video_url: MyString
+  held_on: 2025-08-12
+  transcript: MyText
+  summary: MyText
+  title: MyString
