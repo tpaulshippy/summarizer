@@ -1,6 +1,8 @@
+require "ruby_llm"
+
 class MeetingSummarizer
-  def initialize(model: "anthropic/claude-3-5-haiku")
-    @client = RubyLLM::Client.new(provider: :anthropic, model: model)
+  def initialize(model: "openai/gpt-oss-20b:free")
+    @chat = RubyLLM::Chat.new(provider: :openrouter, model: model, assume_model_exists: true)
   end
 
   def summarize(meeting)
@@ -14,12 +16,11 @@ class MeetingSummarizer
       #{meeting.transcript}
     TEXT
 
-    response = @client.chat(messages: [
-      { role: :system, content: "You write clear, neutral, factual summaries." },
-      { role: :user, content: prompt }
-    ])
+    response = @chat
+      .with_instructions("You write clear, neutral, factual summaries.")
+      .ask(prompt)
 
-    response.output
+    response.content
   rescue => e
     Rails.logger.error("Summary error: #{e.message}")
     nil

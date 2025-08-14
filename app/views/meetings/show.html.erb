@@ -8,7 +8,13 @@
     <h1 class="text-3xl font-semibold mb-4"><%= @meeting.title.presence || @meeting.video_id %></h1>
     <div class="prose max-w-none">
       <h2 class="text-xl font-semibold mt-6 mb-2">Summary</h2>
-      <div class="bg-white ring-1 ring-slate-200 rounded-lg p-4 whitespace-pre-wrap"><%= @meeting.summary.presence || "Summary pending..." %></div>
+      <div class="bg-white ring-1 ring-slate-200 rounded-lg p-4 prose prose-slate max-w-none [&_table]:border-collapse [&_table]:border [&_table]:border-slate-300 [&_th]:border [&_th]:border-slate-300 [&_th]:bg-slate-50 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_td]:border [&_td]:border-slate-300 [&_td]:px-3 [&_td]:py-2">
+        <% if @meeting.summary.present? %>
+          <%= markdown(@meeting.summary) %>
+        <% else %>
+          <p class="text-slate-500 italic">Summary pending...</p>
+        <% end %>
+      </div>
 
       <h2 class="text-xl font-semibold mt-6 mb-2">Transcript</h2>
       <details class="bg-white ring-1 ring-slate-200 rounded-lg p-4" open>
