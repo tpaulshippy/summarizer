@@ -10,7 +10,7 @@ class TranscriptFetcher
     stdout_str, stderr_str, status = Open3.capture3(*cmd)
     unless status.success?
       Rails.logger.error("Transcript fetch failed: #{stderr_str}\n#{stdout_str}")
-      return nil
+      raise "Transcript fetch failed: #{stderr_str}\n#{stdout_str}"
     end
     File.read(output_file)
   rescue => e
