@@ -18,7 +18,7 @@ gem "stimulus-rails"
 gem "tailwindcss-rails"
 
 # Pagination
-gem "pagy", "~> 7.0"
+gem "pagy", "~> 9.4"
 
 # LLM client for Anthropic Claude
 gem "ruby_llm", "~> 1.6"
