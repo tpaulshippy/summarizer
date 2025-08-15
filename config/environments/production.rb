@@ -77,7 +77,7 @@ Rails.application.configure do
   config.active_record.attributes_for_inspect = [ :id ]
 
   # Enable DNS rebinding protection and other `Host` header attacks.
-  config.hosts << ENV['REMOTE_HOST'] if ENV['REMOTE_HOST'].present?
+  config.hosts << ENV["REMOTE_HOST"] if ENV["REMOTE_HOST"].present?
 
   #
   # Skip DNS rebinding protection for the default health check endpoint.

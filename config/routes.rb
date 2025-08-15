@@ -7,8 +7,8 @@ Rails.application.routes.draw do
 
   root to: "meetings#index"
 
-  resources :municipalities, only: [:index, :show]
-  resources :meetings, only: [:index, :show]
+  resources :municipalities, only: [ :index, :show ]
+  resources :meetings, only: [ :index, :show ]
 
   # Solid Queue Dashboard
   mount SolidQueueDashboard::Engine, at: "/solid_queue"

@@ -23,6 +23,6 @@ class MeetingSummarizer
     response.content
   rescue => e
     Rails.logger.error("Summary error: #{e.message}")
-    nil
+    raise e
   end
 end

@@ -6,21 +6,40 @@ class IngestPlaylistsJob < ApplicationJob
     Municipality.find_each do |m|
       items = scraper.fetch_playlist_items(m.youtube_playlist_url)
       items.each do |item|
-        next if Meeting.exists?(video_id: item[:video_id])
+        meeting = Meeting.find_by(video_id: item[:video_id])
 
-        transcript = TranscriptFetcher.fetch_text_for(item[:video_id])
+        if meeting
+          # Update existing meeting if transcript or summary is blank
+          needs_transcript = meeting.transcript.blank?
+          needs_summary = meeting.summary.blank?
 
-        meeting = m.meetings.create!(
-          meeting_type: infer_meeting_type(item[:title], m.name),
-          video_id: item[:video_id],
-          video_url: item[:video_url],
-          title: item[:title],
-          transcript: transcript,
-          held_on: infer_date_from_title(item[:title]) || Date.current
-        )
+          if needs_transcript || needs_summary
+            if needs_transcript
+              transcript = TranscriptFetcher.fetch_text_for(item[:video_id])
+              meeting.update(transcript: transcript) if transcript.present?
+            end
 
-        summary = MeetingSummarizer.new.summarize(meeting) if meeting.transcript.present?
-        meeting.update(summary: summary) if summary.present?
+            if needs_summary && meeting.transcript.present?
+              summary = MeetingSummarizer.new.summarize(meeting)
+              meeting.update(summary: summary) if summary.present?
+            end
+          end
+        else
+          # Create new meeting
+          transcript = TranscriptFetcher.fetch_text_for(item[:video_id])
+
+          meeting = m.meetings.create!(
+            meeting_type: infer_meeting_type(item[:title], m.name),
+            video_id: item[:video_id],
+            video_url: item[:video_url],
+            title: item[:title],
+            transcript: transcript,
+            held_on: infer_date_from_title(item[:title]) || Date.current
+          )
+
+          summary = MeetingSummarizer.new.summarize(meeting) if meeting.transcript.present?
+          meeting.update(summary: summary) if summary.present?
+        end
       end
     end
   end

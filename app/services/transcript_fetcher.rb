@@ -6,7 +6,7 @@ class TranscriptFetcher
 
   def self.fetch_text_for(video_id)
     output_file = Rails.root.join("tmp", "#{video_id}_transcript.txt").to_s
-    cmd = [PYTHON_EXECUTABLE, PYTHON_SCRIPT, video_id, output_file]
+    cmd = [ PYTHON_EXECUTABLE, PYTHON_SCRIPT, video_id, output_file ]
     stdout_str, stderr_str, status = Open3.capture3(*cmd)
     unless status.success?
       Rails.logger.error("Transcript fetch failed: #{stderr_str}\n#{stdout_str}")
@@ -15,6 +15,6 @@ class TranscriptFetcher
     File.read(output_file)
   rescue => e
     Rails.logger.error("Transcript fetch error: #{e.message}")
-    nil
+    raise e
   end
 end
