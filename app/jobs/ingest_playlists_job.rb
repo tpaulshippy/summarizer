@@ -21,8 +21,6 @@ class IngestPlaylistsJob < ApplicationJob
 
         summary = MeetingSummarizer.new.summarize(meeting) if meeting.transcript.present?
         meeting.update(summary: summary) if summary.present?
-
-        break # just do one for now
       end
     end
   end
