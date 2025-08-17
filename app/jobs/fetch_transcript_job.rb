@@ -6,7 +6,11 @@ class FetchTranscriptJob < ApplicationJob
     return if meeting.transcript.present?
 
     transcript = TranscriptFetcher.fetch_text_for(meeting.video_id)
-    meeting.update(transcript: transcript) if transcript.present?
+    if transcript.present?
+      meeting.update(transcript: transcript)
+    else
+      Rails.logger.info("Transcript fetch returned nil for meeting #{meeting_id} (video_id: #{meeting.video_id}) - likely in cloud environment")
+    end
   rescue => e
     Rails.logger.error("FetchTranscriptJob error for meeting #{meeting_id}: #{e.message}")
     raise e

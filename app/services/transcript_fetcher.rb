@@ -5,6 +5,11 @@ class TranscriptFetcher
   PYTHON_EXECUTABLE = Rails.root.join("venv", "bin", "python").to_s
 
   def self.fetch_text_for(video_id)
+    if Rails.env.production? && cloud_environment?
+      Rails.logger.info("Skipping transcript fetch in cloud environment for video_id: #{video_id}")
+      return nil
+    end
+
     output_file = Rails.root.join("tmp", "#{video_id}_transcript.txt").to_s
     cmd = [ PYTHON_EXECUTABLE, PYTHON_SCRIPT, video_id, output_file ]
     stdout_str, stderr_str, status = Open3.capture3(*cmd)
@@ -15,6 +20,16 @@ class TranscriptFetcher
     File.read(output_file)
   rescue => e
     Rails.logger.error("Transcript fetch error: #{e.message}")
+    if Rails.env.production? && cloud_environment?
+      Rails.logger.info("Transcript fetch failed in cloud environment - will need manual upload")
+      return nil
+    end
     raise e
+  end
+
+  private
+
+  def self.cloud_environment?
+    ENV['KAMAL_DEPLOY'].present? || ENV['RENDER'].present? || ENV['HEROKU'].present? || !File.exist?(PYTHON_EXECUTABLE)
   end
 end
