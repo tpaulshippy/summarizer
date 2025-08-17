@@ -25,6 +25,10 @@ class PlaylistScraper
   def fetch_playlist_items(playlist_url)
     # Fallback simple approach: use YouTube page and extract video ids via regex
     html = fetch_html(playlist_url)
+
+    # Ensure HTML is properly encoded before scanning
+    html = html.encode("UTF-8", invalid: :replace, undef: :replace, replace: "?") unless html.valid_encoding?
+
     video_ids = html.scan(/"videoId":"([A-Za-z0-9_-]{11})"/).flatten.uniq
     video_ids.map do |vid|
       video_url = "https://www.youtube.com/watch?v=#{vid}"
@@ -48,6 +52,10 @@ class PlaylistScraper
   def each_playlist_item(playlist_url, &block)
     # Fallback simple approach: use YouTube page and extract video ids via regex
     html = fetch_html(playlist_url)
+
+    # Ensure HTML is properly encoded before scanning
+    html = html.encode("UTF-8", invalid: :replace, undef: :replace, replace: "?") unless html.valid_encoding?
+
     video_ids = html.scan(/"videoId":"([A-Za-z0-9_-]{11})"/).flatten.uniq
 
     video_ids.each do |vid|
@@ -83,7 +91,29 @@ class PlaylistScraper
   # Helper method to fetch HTML with proper headers
   def fetch_html(url)
     uri = URI.parse(url)
-    uri.open(REQUEST_HEADERS).read
+    response = uri.open(REQUEST_HEADERS).read
+
+    # Ensure the response is properly encoded as UTF-8
+    # This handles cases where the response contains invalid byte sequences
+    response.force_encoding("UTF-8")
+
+    # If it's not valid UTF-8, try to clean it up
+    unless response.valid_encoding?
+      # First try to convert from common encodings
+      [ "ISO-8859-1", "Windows-1252" ].each do |encoding|
+        begin
+          cleaned = response.force_encoding(encoding).encode("UTF-8")
+          return cleaned if cleaned.valid_encoding?
+        rescue Encoding::UndefinedConversionError, Encoding::InvalidByteSequenceError
+          next
+        end
+      end
+
+      # If conversion fails, remove invalid bytes
+      response = response.scrub("?")
+    end
+
+    response
   end
 
   def fetch_metadata_for(video_url)
