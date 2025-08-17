@@ -126,23 +126,87 @@ class PlaylistScraper
     io&.close
   end
 
+  # Helper method to fetch JSON with proper headers and gzip handling
+  def fetch_json(url)
+    uri = URI.parse(url)
+    io = uri.open(REQUEST_HEADERS)
+
+    # Check if response is gzipped and decompress if needed
+    response = if io.meta["content-encoding"] == "gzip"
+                 Zlib::GzipReader.new(io).read
+    else
+                 io.read
+    end
+
+    # Ensure the response is properly encoded as UTF-8
+    response.force_encoding("UTF-8")
+
+    # Clean up encoding if needed
+    unless response.valid_encoding?
+      response = response.scrub("?")
+    end
+
+    response
+  ensure
+    io&.close
+  end
+
   def fetch_metadata_for(video_url)
     # Fetch the YouTube page HTML to extract metadata
     html = fetch_html(video_url)
 
+    # Debug logging to understand what we're getting
+    Rails.logger.debug("HTML length for #{video_url}: #{html.length}")
+    Rails.logger.debug("HTML contains 'application/ld+json': #{html.include?('application/ld+json')}")
+
     # Extract JSON-LD structured data which contains metadata
-    json_ld_match = html.match(/<script type="application\/ld\+json"[^>]*>(.*?)<\/script>/m)
+    # Try multiple patterns for JSON-LD scripts
+    json_ld_match = html.match(/<script type="application\/ld\+json"[^>]*>(.*?)<\/script>/m) ||
+                    html.match(/<script[^>]*type=['"]application\/ld\+json['"][^>]*>(.*?)<\/script>/m) ||
+                    html.match(/<script[^>]*application\/ld\+json[^>]*>(.*?)<\/script>/m)
+
+    Rails.logger.debug("JSON-LD match found: #{!json_ld_match.nil?}")
+
+    # If no JSON-LD found, let's see what script tags we do have
+    if json_ld_match.nil?
+      script_tags = html.scan(/<script[^>]*type=['"]?([^'">\s]+)['"]?[^>]*>/i).flatten.uniq
+      Rails.logger.debug("Available script types: #{script_tags}")
+    end
+
     if json_ld_match
-      json_data = JSON.parse(json_ld_match[1])
-      result = extract_from_json_ld(json_data)
-      return result if result[:title].present?
+      begin
+        json_data = JSON.parse(json_ld_match[1])
+        result = extract_from_json_ld(json_data)
+        return result if result[:title].present?
+      rescue JSON::ParserError => e
+        Rails.logger.warn("JSON-LD parsing failed for #{video_url}: #{e.message}")
+      end
     end
 
     # Fallback to extracting from page data
+    Rails.logger.debug("Trying page data extraction fallback for #{video_url}")
     result = extract_from_page_data(html)
-    return result if result[:title].present?
+    if result[:title].present?
+      Rails.logger.debug("Page data extraction successful: #{result[:title]}")
+      return result
+    end
+
+    # Fallback to basic HTML title extraction
+    Rails.logger.debug("Trying HTML title extraction fallback for #{video_url}")
+    title = extract_title_from_html(html)
+    if title.present?
+      Rails.logger.debug("HTML title extraction successful: #{title}")
+      return {
+        title: title,
+        published_at: nil,
+        duration: nil,
+        description: nil,
+        channel_name: nil
+      }
+    end
 
     # Final fallback to oEmbed
+    Rails.logger.debug("Using oEmbed fallback for #{video_url}")
     fallback_oembed_data(video_url)
   rescue => e
     Rails.logger.error("Metadata extraction error for #{video_url}: #{e.message}")
@@ -168,6 +232,8 @@ class PlaylistScraper
     player_response_match = html.match(/var ytInitialPlayerResponse\s*=\s*({.+?});/) ||
                            html.match(/"ytInitialPlayerResponse"\s*:\s*({.+?})\s*[,;}]/)
 
+    Rails.logger.debug("ytInitialPlayerResponse found: #{!player_response_match.nil?}")
+
     if player_response_match
       player_data = JSON.parse(player_response_match[1])
       video_details = player_data.dig("videoDetails")
@@ -184,6 +250,8 @@ class PlaylistScraper
 
     # Try ytInitialData as fallback
     initial_data_match = html.match(/var ytInitialData\s*=\s*({.+?});/)
+    Rails.logger.debug("ytInitialData found: #{!initial_data_match.nil?}")
+
     if initial_data_match
       initial_data = JSON.parse(initial_data_match[1])
       # Navigate through the complex structure to find video info
@@ -233,7 +301,14 @@ class PlaylistScraper
   def fallback_oembed_data(video_url)
     # Fallback to oEmbed if all else fails
     url = YOUTUBE_OEMBED + CGI.escape(video_url)
-    json = URI.parse(url).open(REQUEST_HEADERS).read
+    json = fetch_json(url)
+
+    # Handle empty or invalid responses
+    if json.blank? || json.strip.empty?
+      Rails.logger.warn("oEmbed returned empty response for #{video_url}")
+      return empty_metadata
+    end
+
     oembed_data = JSON.parse(json)
 
     {
@@ -243,9 +318,16 @@ class PlaylistScraper
       description: nil,
       channel_name: oembed_data["author_name"]
     }
+  rescue JSON::ParserError => e
+    Rails.logger.warn("oEmbed JSON parsing failed for #{video_url}: #{e.message}")
+    Rails.logger.warn("Raw oEmbed response: #{json[0..200].inspect}")
+    empty_metadata
   rescue => e
     Rails.logger.warn("oEmbed fallback failed for #{video_url}: #{e.message}")
-    # Return empty metadata - the calling method will provide the video ID fallback
+    empty_metadata
+  end
+
+  def empty_metadata
     {
       title: nil,
       published_at: nil,
