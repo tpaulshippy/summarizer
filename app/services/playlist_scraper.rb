@@ -235,17 +235,29 @@ class PlaylistScraper
     Rails.logger.debug("ytInitialPlayerResponse found: #{!player_response_match.nil?}")
 
     if player_response_match
-      player_data = JSON.parse(player_response_match[1])
-      video_details = player_data.dig("videoDetails")
-      microformat = player_data.dig("microformat", "playerMicroformatRenderer")
+      begin
+        player_data = JSON.parse(player_response_match[1])
+        video_details = player_data.dig("videoDetails")
+        microformat = player_data.dig("microformat", "playerMicroformatRenderer")
 
-      return {
-        title: video_details&.dig("title"),
-        published_at: parse_date(microformat&.dig("publishDate") || microformat&.dig("uploadDate")),
-        duration: video_details&.dig("lengthSeconds"),
-        description: video_details&.dig("shortDescription"),
-        channel_name: video_details&.dig("author")
-      }
+        Rails.logger.debug("Player data keys: #{player_data.keys}")
+        Rails.logger.debug("Video details present: #{!video_details.nil?}")
+        Rails.logger.debug("Video details keys: #{video_details&.keys}")
+        Rails.logger.debug("Video title: #{video_details&.dig('title')}")
+
+        result = {
+          title: video_details&.dig("title"),
+          published_at: parse_date(microformat&.dig("publishDate") || microformat&.dig("uploadDate")),
+          duration: video_details&.dig("lengthSeconds"),
+          description: video_details&.dig("shortDescription"),
+          channel_name: video_details&.dig("author")
+        }
+
+        Rails.logger.debug("ytInitialPlayerResponse result: #{result}")
+        return result if result[:title].present?
+      rescue JSON::ParserError => e
+        Rails.logger.warn("ytInitialPlayerResponse JSON parsing failed: #{e.message}")
+      end
     end
 
     # Try ytInitialData as fallback
@@ -253,20 +265,30 @@ class PlaylistScraper
     Rails.logger.debug("ytInitialData found: #{!initial_data_match.nil?}")
 
     if initial_data_match
-      initial_data = JSON.parse(initial_data_match[1])
-      # Navigate through the complex structure to find video info
-      video_primary_info = initial_data.dig("contents", "twoColumnWatchNextResults", "results", "results", "contents")&.find do |item|
-        item.dig("videoPrimaryInfoRenderer")
-      end&.dig("videoPrimaryInfoRenderer")
+      begin
+        initial_data = JSON.parse(initial_data_match[1])
+        Rails.logger.debug("ytInitialData keys: #{initial_data.keys}")
 
-      if video_primary_info
-        return {
-          title: video_primary_info.dig("title", "runs", 0, "text"),
-          published_at: parse_date(video_primary_info.dig("dateText", "simpleText")),
-          duration: nil,
-          description: nil,
-          channel_name: nil
-        }
+        # Navigate through the complex structure to find video info
+        video_primary_info = initial_data.dig("contents", "twoColumnWatchNextResults", "results", "results", "contents")&.find do |item|
+          item.dig("videoPrimaryInfoRenderer")
+        end&.dig("videoPrimaryInfoRenderer")
+
+        Rails.logger.debug("Video primary info found: #{!video_primary_info.nil?}")
+
+        if video_primary_info
+          result = {
+            title: video_primary_info.dig("title", "runs", 0, "text"),
+            published_at: parse_date(video_primary_info.dig("dateText", "simpleText")),
+            duration: nil,
+            description: nil,
+            channel_name: nil
+          }
+          Rails.logger.debug("ytInitialData result: #{result}")
+          return result if result[:title].present?
+        end
+      rescue JSON::ParserError => e
+        Rails.logger.warn("ytInitialData JSON parsing failed: #{e.message}")
       end
     end
 
