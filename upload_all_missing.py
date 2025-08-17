@@ -65,6 +65,10 @@ def main():
         
         successful = 0
         failed = 0
+        transcripts_disabled = 0
+        ip_blocked = 0
+        no_transcript = 0
+        video_unavailable = 0
         
         for i, video_id in enumerate(video_ids, 1):
             print(f"\n[{i}/{len(video_ids)}] Processing video ID: {video_id}")
@@ -87,14 +91,41 @@ def main():
                 successful += 1
                 
             except Exception as e:
-                print(f"   ❌ Error: {e}")
-                failed += 1
+                error_msg = str(e)
+                if error_msg == "TRANSCRIPTS_DISABLED":
+                    transcripts_disabled += 1
+                elif error_msg == "IP_BLOCKED":
+                    ip_blocked += 1
+                elif error_msg == "NO_TRANSCRIPT_FOUND":
+                    no_transcript += 1
+                elif error_msg == "VIDEO_UNAVAILABLE":
+                    video_unavailable += 1
+                else:
+                    print(f"   ❌ Error: {e}")
+                    failed += 1
         
         print(f"\n📊 Summary:")
         print(f"   ✅ Successful: {successful}")
-        print(f"   ❌ Failed: {failed}")
-        if successful + failed > 0:
-            print(f"   📈 Success rate: {successful/(successful+failed)*100:.1f}%")
+        print(f"   ❌ Failed (other): {failed}")
+        if transcripts_disabled > 0:
+            print(f"   ⚠️  Transcripts disabled: {transcripts_disabled}")
+        if ip_blocked > 0:
+            print(f"   🚫 IP blocked/rate limited: {ip_blocked}")
+        if no_transcript > 0:
+            print(f"   📭 No transcript found: {no_transcript}")
+        if video_unavailable > 0:
+            print(f"   🚫 Video unavailable: {video_unavailable}")
+        
+        total_processed = successful + failed + transcripts_disabled + ip_blocked + no_transcript + video_unavailable
+        if total_processed > 0:
+            print(f"   📈 Success rate: {successful/total_processed*100:.1f}%")
+            
+        # Provide helpful tips if there are IP blocks
+        if ip_blocked > 0:
+            print(f"\n💡 Tips for IP blocking issues:")
+            print(f"   • Wait a few hours/minutes before retrying")
+            print(f"   • Try running from a different network/IP")
+            print(f"   • Consider using a VPN if the issue persists")
         
     except Exception as e:
         print(f"❌ Error: {e}")
