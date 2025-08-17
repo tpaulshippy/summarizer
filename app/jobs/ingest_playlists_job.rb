@@ -31,6 +31,8 @@ class IngestPlaylistsJob < ApplicationJob
             description: item[:description]
           )
         end
+
+        break # just do one for now
       end
     end
   end
