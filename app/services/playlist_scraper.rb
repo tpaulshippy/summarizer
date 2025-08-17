@@ -3,6 +3,7 @@ require "json"
 require "cgi"
 require "date"
 require "net/http"
+require "zlib"
 
 class PlaylistScraper
   YOUTUBE_OEMBED = "https://www.youtube.com/oembed?format=json&url="
@@ -91,7 +92,14 @@ class PlaylistScraper
   # Helper method to fetch HTML with proper headers
   def fetch_html(url)
     uri = URI.parse(url)
-    response = uri.open(REQUEST_HEADERS).read
+    io = uri.open(REQUEST_HEADERS)
+
+    # Check if response is gzipped and decompress if needed
+    response = if io.meta["content-encoding"] == "gzip"
+                 Zlib::GzipReader.new(io).read
+    else
+                 io.read
+    end
 
     # Ensure the response is properly encoded as UTF-8
     # This handles cases where the response contains invalid byte sequences
@@ -114,6 +122,8 @@ class PlaylistScraper
     end
 
     response
+  ensure
+    io&.close
   end
 
   def fetch_metadata_for(video_url)
