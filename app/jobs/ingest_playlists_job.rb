@@ -9,11 +9,12 @@ class IngestPlaylistsJob < ApplicationJob
         meeting = Meeting.find_by(video_id: item[:video_id])
 
         if meeting
-          # Update existing meeting if transcript or summary is blank
+          # Update existing meeting if transcript or summary is blank, or if metadata is missing
           needs_transcript = meeting.transcript.blank?
           needs_summary = meeting.summary.blank?
+          needs_metadata = meeting.duration.blank? || meeting.channel_name.blank? || meeting.description.nil?
 
-          if needs_transcript || needs_summary
+          if needs_transcript || needs_summary || needs_metadata
             if needs_transcript
               transcript = TranscriptFetcher.fetch_text_for(item[:video_id])
               meeting.update(transcript: transcript) if transcript.present?
@@ -22,6 +23,14 @@ class IngestPlaylistsJob < ApplicationJob
             if needs_summary && meeting.transcript.present?
               summary = MeetingSummarizer.new.summarize(meeting)
               meeting.update(summary: summary) if summary.present?
+            end
+
+            if needs_metadata
+              meeting.update(
+                duration: item[:duration]&.to_i,
+                channel_name: item[:channel_name],
+                description: item[:description]
+              )
             end
           end
         else
@@ -34,7 +43,10 @@ class IngestPlaylistsJob < ApplicationJob
             video_url: item[:video_url],
             title: item[:title],
             transcript: transcript,
-            held_on: infer_date_from_title(item[:title]) || Date.current
+            held_on: item[:published_at] || infer_date_from_title(item[:title]) || Date.current,
+            duration: item[:duration]&.to_i,
+            channel_name: item[:channel_name],
+            description: item[:description]
           )
 
           summary = MeetingSummarizer.new.summarize(meeting) if meeting.transcript.present?

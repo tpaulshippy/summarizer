@@ -1,6 +1,7 @@
 require "open-uri"
 require "json"
 require "cgi"
+require "date"
 
 class PlaylistScraper
   YOUTUBE_OEMBED = "https://www.youtube.com/oembed?format=json&url="
@@ -9,16 +10,22 @@ class PlaylistScraper
     @http = http
   end
 
-  # Returns an array of hashes with keys: :video_id, :video_url, :title
+  # Returns an array of hashes with keys: :video_id, :video_url, :title, :published_at, :duration, :description
   def fetch_playlist_items(playlist_url)
     # Fallback simple approach: use YouTube page and extract video ids via regex
     html = URI.parse(playlist_url).open.read
     video_ids = html.scan(/"videoId":"([A-Za-z0-9_-]{11})"/).flatten.uniq
     video_ids.map do |vid|
+      video_url = "https://www.youtube.com/watch?v=#{vid}"
+      metadata = fetch_metadata_for(video_url)
       {
         video_id: vid,
-        video_url: "https://www.youtube.com/watch?v=#{vid}",
-        title: fetch_title_for("https://www.youtube.com/watch?v=#{vid}")
+        video_url: video_url,
+        title: metadata[:title],
+        published_at: metadata[:published_at],
+        duration: metadata[:duration],
+        description: metadata[:description],
+        channel_name: metadata[:channel_name]
       }
     end
   rescue => e
@@ -28,12 +35,124 @@ class PlaylistScraper
 
   private
 
-  def fetch_title_for(video_url)
-    # Use oEmbed for a quick title fetch without API key
+  def fetch_metadata_for(video_url)
+    # Fetch the YouTube page HTML to extract metadata
+    html = URI.parse(video_url).open.read
+    
+    # Extract JSON-LD structured data which contains metadata
+    json_ld_match = html.match(/<script type="application\/ld\+json"[^>]*>(.*?)<\/script>/m)
+    if json_ld_match
+      json_data = JSON.parse(json_ld_match[1])
+      return extract_from_json_ld(json_data)
+    end
+    
+    # Fallback to extracting from page data
+    extract_from_page_data(html)
+  rescue => e
+    Rails.logger.error("Metadata extraction error for #{video_url}: #{e.message}")
+    fallback_oembed_data(video_url)
+  end
+
+  def extract_from_json_ld(json_data)
+    # Handle both single objects and arrays
+    data = json_data.is_a?(Array) ? json_data.first : json_data
+    
+    {
+      title: data.dig("name"),
+      published_at: parse_date(data.dig("uploadDate")),
+      duration: data.dig("duration"),
+      description: data.dig("description"),
+      channel_name: data.dig("author", "name")
+    }
+  end
+
+  def extract_from_page_data(html)
+    # Extract from ytInitialPlayerResponse (try both patterns)
+    player_response_match = html.match(/var ytInitialPlayerResponse\s*=\s*({.+?});/) ||
+                           html.match(/"ytInitialPlayerResponse"\s*:\s*({.+?})\s*[,;}]/)
+    
+    if player_response_match
+      player_data = JSON.parse(player_response_match[1])
+      video_details = player_data.dig("videoDetails")
+      microformat = player_data.dig("microformat", "playerMicroformatRenderer")
+      
+      return {
+        title: video_details&.dig("title"),
+        published_at: parse_date(microformat&.dig("publishDate") || microformat&.dig("uploadDate")),
+        duration: video_details&.dig("lengthSeconds"),
+        description: video_details&.dig("shortDescription"),
+        channel_name: video_details&.dig("author")
+      }
+    end
+    
+    # Try ytInitialData as fallback
+    initial_data_match = html.match(/var ytInitialData\s*=\s*({.+?});/)
+    if initial_data_match
+      initial_data = JSON.parse(initial_data_match[1])
+      # Navigate through the complex structure to find video info
+      video_primary_info = initial_data.dig("contents", "twoColumnWatchNextResults", "results", "results", "contents")&.find do |item|
+        item.dig("videoPrimaryInfoRenderer")
+      end&.dig("videoPrimaryInfoRenderer")
+      
+      if video_primary_info
+        return {
+          title: video_primary_info.dig("title", "runs", 0, "text"),
+          published_at: parse_date(video_primary_info.dig("dateText", "simpleText")),
+          duration: nil,
+          description: nil,
+          channel_name: nil
+        }
+      end
+    end
+    
+    # Final fallback to basic parsing
+    {
+      title: extract_title_from_html(html),
+      published_at: nil,
+      duration: nil,
+      description: nil,
+      channel_name: nil
+    }
+  end
+
+  def extract_title_from_html(html)
+    title_match = html.match(/<title[^>]*>(.*?)<\/title>/m)
+    return nil unless title_match
+    
+    title = title_match[1].strip
+    # Remove " - YouTube" suffix
+    title.gsub(/ - YouTube$/, "")
+  end
+
+  def parse_date(date_string)
+    return nil if date_string.blank?
+    
+    # Handle ISO 8601 format
+    Date.parse(date_string)
+  rescue Date::Error
+    nil
+  end
+
+  def fallback_oembed_data(video_url)
+    # Fallback to oEmbed if all else fails
     url = YOUTUBE_OEMBED + CGI.escape(video_url)
     json = URI.parse(url).open.read
-    JSON.parse(json).fetch("title", nil)
+    oembed_data = JSON.parse(json)
+    
+    {
+      title: oembed_data["title"],
+      published_at: nil,
+      duration: nil,
+      description: nil,
+      channel_name: oembed_data["author_name"]
+    }
   rescue
-    nil
+    {
+      title: nil,
+      published_at: nil,
+      duration: nil,
+      description: nil,
+      channel_name: nil
+    }
   end
 end
