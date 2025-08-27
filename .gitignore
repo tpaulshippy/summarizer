@@ -36,4 +36,7 @@
 .DS_Store
 
 # Python transcript outputs
-*_transcript.*
+*_transcript.json
+*_transcript.txt
+
+__pycache__

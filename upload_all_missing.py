@@ -88,13 +88,15 @@ def main():
                 # Upload to server
                 print("   🔄 Uploading...")
                 upload_transcript(video_id, transcript, api_key, server_url)
-                successful += 1
+                
+                if transcript == "Transcripts are disabled for this video.":
+                    transcripts_disabled += 1
+                else:
+                    successful += 1
                 
             except Exception as e:
                 error_msg = str(e)
-                if error_msg == "TRANSCRIPTS_DISABLED":
-                    transcripts_disabled += 1
-                elif error_msg == "IP_BLOCKED":
+                if error_msg == "IP_BLOCKED":
                     ip_blocked += 1
                 elif error_msg == "NO_TRANSCRIPT_FOUND":
                     no_transcript += 1

@@ -7,6 +7,7 @@ Usage: python get_transcript.py <video_id_or_url> [output_filename]
 """
 
 import sys
+import os
 import re
 from youtube_transcript_api import (
     YouTubeTranscriptApi,
@@ -15,6 +16,11 @@ from youtube_transcript_api import (
     VideoUnavailable,
 )
 from youtube_transcript_api.formatters import TextFormatter
+from youtube_transcript_api.proxies import WebshareProxyConfig
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def extract_video_id(url_or_id):
@@ -44,7 +50,13 @@ def get_transcript(video_id, preferred_languages=None):
 
     try:
         # Initialize API client (v1.2.x requires instantiation)
-        api = YouTubeTranscriptApi()
+        api = YouTubeTranscriptApi(
+            proxy_config=WebshareProxyConfig(
+                proxy_username=os.getenv("WEBSHARE_PROXY_USERNAME"),
+                proxy_password=os.getenv("WEBSHARE_PROXY_PASSWORD"),
+                filter_ip_locations=["us"],
+            )
+        )
         # Try the advanced API first to pick the best transcript
         transcripts = api.list(video_id)
         try:
