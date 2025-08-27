@@ -1,7 +1,7 @@
 require "ruby_llm"
 
 class MeetingSummarizer
-  def initialize(model: "openai/gpt-oss-20b:free")
+  def initialize(model: ENV["SUMMARY_MODEL"])
     @chat = RubyLLM::Chat.new(provider: :openrouter, model: model, assume_model_exists: true)
   end
 
