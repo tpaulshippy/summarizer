@@ -14,7 +14,7 @@ class TranscriptFetcher
     cmd = [ PYTHON_EXECUTABLE, PYTHON_SCRIPT, video_id, output_file ]
     stdout_str, stderr_str, status = Open3.capture3(*cmd)
     unless status.success?
-      if stderr_str.include?("Transcripts are disabled for this video.")
+      if stdout_str.include?("Transcripts are disabled for this video.") || stderr_str.include?("Transcripts are disabled for this video.")
         return "Transcripts are disabled for this video."
       end
 
