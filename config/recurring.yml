@@ -14,13 +14,13 @@ production:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12
   
-  ingest_playlists_nightly:
+  ingest_playlists_hourly:
     class: IngestPlaylistsJob
     queue: default
-    schedule: at 2am every day
+    schedule: every hour
 
 development:
-  ingest_playlists_nightly:
+  ingest_playlists_hourly:
     class: IngestPlaylistsJob
     queue: default
-    schedule: at 2am every day
+    schedule: every hour

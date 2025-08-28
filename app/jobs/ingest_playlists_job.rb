@@ -18,6 +18,12 @@ class IngestPlaylistsJob < ApplicationJob
               description: item[:description]
             )
           end
+
+          if meeting.transcript.blank?
+            meeting.schedule_transcript_fetch
+          elsif meeting.summary.blank?
+            meeting.schedule_summary_generation
+          end
         else
           # Create new meeting - callbacks will handle transcript and summary
           m.meetings.create!(

@@ -16,8 +16,6 @@ class Meeting < ApplicationRecord
   after_create :schedule_transcript_fetch
   after_update :schedule_summary_generation, if: :saved_change_to_transcript?
 
-  private
-
   def schedule_transcript_fetch
     FetchTranscriptJob.perform_later(id) if transcript.blank?
   end
