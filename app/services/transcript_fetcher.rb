@@ -15,7 +15,7 @@ class TranscriptFetcher
     stdout_str, stderr_str, status = Open3.capture3(*cmd)
     unless status.success?
       if stdout_str.include?("Transcripts are disabled for this video.") || stderr_str.include?("Transcripts are disabled for this video.")
-        return "Transcripts are disabled for this video."
+        raise "Transcripts are disabled for video_id: #{video_id}"
       end
 
       Rails.logger.error("Transcript fetch failed: #{stderr_str}\n#{stdout_str}")
