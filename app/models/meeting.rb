@@ -37,9 +37,17 @@ class Meeting < ApplicationRecord
   end
 
   def update_from_playlist_item(item, meeting_date)
-    update_metadata_if_needed(item)
-    update_date_if_changed(meeting_date)
-    schedule_processing_if_needed
+    updates = {}
+
+    if needs_metadata_update?
+      updates[:duration] = item[:duration]&.to_i
+      updates[:channel_name] = item[:channel_name]
+      updates[:description] = item[:description]
+    end
+
+    updates[:held_on] = meeting_date if held_on != meeting_date
+
+    update(updates) if updates.any?
   end
 
   def self.create_from_playlist_item(municipality, item, meeting_date)
@@ -77,27 +85,5 @@ class Meeting < ApplicationRecord
 
   def needs_metadata_update?
     duration.blank? || channel_name.blank? || description.nil?
-  end
-
-  def update_metadata_if_needed(item)
-    return unless needs_metadata_update?
-
-    update(
-      duration: item[:duration]&.to_i,
-      channel_name: item[:channel_name],
-      description: item[:description]
-    )
-  end
-
-  def update_date_if_changed(meeting_date)
-    update(held_on: meeting_date) if held_on != meeting_date
-  end
-
-  def schedule_processing_if_needed
-    if transcript.blank?
-      schedule_transcript_fetch
-    elsif summary.blank?
-      schedule_summary_generation
-    end
   end
 end
