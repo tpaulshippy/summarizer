@@ -78,9 +78,6 @@ class PlaylistScraper
         channel_name: metadata[:channel_name]
       }
       yield(item)
-
-      # Add a small delay to avoid rate limiting
-      sleep(1)
     end
   rescue => e
     Rails.logger.error("PlaylistScraper error: #{e.message}")
