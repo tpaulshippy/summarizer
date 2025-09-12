@@ -286,7 +286,7 @@ GEM
       rubocop-performance (>= 1.24)
       rubocop-rails (>= 2.30)
     ruby-progressbar (1.13.0)
-    ruby_llm (1.6.0)
+    ruby_llm (1.7.1)
       base64
       event_stream_parser (~> 1)
       faraday (>= 1.10.0)
@@ -396,7 +396,7 @@ DEPENDENCIES
   rails (~> 8.0.2)
   redcarpet (~> 3.6)
   rubocop-rails-omakase
-  ruby_llm (~> 1.6)
+  ruby_llm (~> 1.7)
   solid_cable
   solid_cache
   solid_queue

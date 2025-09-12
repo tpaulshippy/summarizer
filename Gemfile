@@ -21,7 +21,7 @@ gem "tailwindcss-rails"
 gem "pagy", "~> 7.0"
 
 # LLM client for Anthropic Claude
-gem "ruby_llm", "~> 1.6"
+gem "ruby_llm", "~> 1.7"
 
 # Markdown rendering
 gem "redcarpet", "~> 3.6"
